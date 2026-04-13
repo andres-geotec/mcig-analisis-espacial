@@ -1,0 +1,115 @@
+---
+title: "Adquisición y preparación de datos"
+author: "AndrésAndrés Martínez González"
+date: "2026-04-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+pacman::p_load(dplyr, sf, stringr, ggplot2, leaflet, leaflet.extras2, rmapshaper)
+data_original = file.path(".", "data_original")
+data_procesada = file.path(".", "data_procesada")
+```
+
+## Movilidad
+
+Datos de movilidad del 2021 origen-destino. Los datos cuentan con el municipio o ageb de origen (source) y destino (target), así como el número de dispositivos detectados (w) que se desplazaron en diferentes horas del día (0, 6, 10, 14, 17 y 21 horas).
+
+Para este estudio se agruparon los datos acumulados del noviembre y diciembre de 2021 del estado de Yucatán. Para ello se generaron las siguientes funciones.
+
+```{r Funciones de movilidad, include=TRUE}
+#' Filtro de movimiento interno
+#'
+#' Filtra los dispositivos que se movieron dentro de Yucatán.
+#'
+#' @param DataFreme de movilidad del que se filtrarán los datos.
+#' 
+#' @returns DataFrame de movilidad filtrado.
+#' @export
+#'
+#' @examples
+#' # Ejemplo de filtrado
+#' filtro_yucatan_interno(df)
+acumular_movilidad <- function(df1, df2) {
+  return(bind_rows(df1, df2) %>%
+    group_by(source, target) %>%
+    summarise(w = sum(w, na.rm = TRUE), .groups = "drop"))
+}
+
+#' Estructuración de archivos de movilidad
+#'
+#' - Lee un archivos de movilidad, asegurandose que las claves geográficas sean leídas correctamente, en string y con el número adecuado de carácteres de acuerdo al tipo, municipio o ageb.
+#' - Acumula los que pertenezcan al estado de Yucatán y sean de noviembre y diciembre de 2021.
+#' - Guarda los acumulados en archivos en csv
+#' - Devuelve las estadíasticas obtenidas en cada lectura
+#'
+#' @param tipo ["municipio", "ageb"] tipo de archivos a leer.
+#' 
+#' @returns DataFrame de estadísticas obtenidas.
+#' @export
+#'
+#' @examples
+#' # Ejemplo de estructuración de archivos de ageb
+#' acumulados_yucatan(tipo = "ageb")
+acumulados_yucatan <- function(tipo = "municipio") {
+  # archivos disponibles de movilidad
+  archivos <- list.files(
+    path = file.path(data_original, paste0("movilidad_", tipo)),
+    pattern = "*.csv", full.names = TRUE)
+  # archivos que sean de noviembre y diciembre
+  archivos <- archivos[grepl("_2021_11|_2021_12", archivos)]
+  
+  estadisticas <- data.frame()
+  internos_acumulado <- data.frame()
+  llegadas_acumulado <- data.frame()
+  salidas_acumulado <- data.frame()
+  
+  for(archivo in archivos) {
+    width_pad_cve <- ifelse(tipo == "municipio", 5, 13)
+    df <- read.csv(archivo) %>%
+      mutate(# asegurar los caracteres adecuados con ceros a la izquierda
+        source = str_pad(as.character(source), width = width_pad_cve, pad = "0", side = "left"),
+        target = str_pad(as.character(target), width = width_pad_cve, pad = "0", side = "left"))
+    
+    # Filtra los que solo se movinron dentro de Yucatán
+    internos <- df |> filter(startsWith(source, "31") & startsWith(target, "31"))
+    internos_acumulado <- acumular_movilidad(internos_acumulado, internos)
+    
+    # Filtra los que vienen de otros estados y llegaron a Yucatán
+    llegadas <- df |> filter(!startsWith(source, "31") & startsWith(target, "31"))
+    llegadas_acumulado <- acumular_movilidad(llegadas_acumulado, llegadas)
+    
+    # Filtra los que son de Yucatán de origen y salieron a otros estados
+    salidas <- df |> filter(startsWith(source, "31") & !startsWith(target, "31"))
+    salidas_acumulado <- acumular_movilidad(salidas_acumulado, salidas)
+    
+    # Guardar estadísticas
+    estadisticas <- rbind(estadisticas, data.frame(
+      archivo = tail(strsplit(archivo, "/")[[1]], 1), total = sum(df$w), total_filas = nrow(df),
+      internos = sum(internos$w), internos_acumulado = sum(internos_acumulado$w),
+      internos_filas = nrow(internos), internos_filas_acumulado = nrow(internos_acumulado),
+      llegadas = nrow(llegadas), llegadas_acumulado = nrow(llegadas_acumulado),
+      salidas = nrow(salidas), salidas_acumulado = nrow(salidas_acumulado)
+    ))
+  }
+  
+  write.csv(internos_acumulado, file.path(data_procesada, paste0(tipo, "-interno.csv")), row.names = FALSE)
+  write.csv(llegadas_acumulado, file.path(data_procesada, paste0(tipo, "-llegadas.csv")), row.names = FALSE)
+  write.csv(salidas_acumulado, file.path(data_procesada, paste0(tipo, "-salidas.csv")), row.names = FALSE)
+  write.csv(estadisticas, file.path(data_procesada, paste0(tipo, "-estadisticas.csv")), row.names = FALSE)
+  
+  return(estadisticas)
+}
+```
+
+
+```{r Acumulados por municipio}
+estadisticas <- summary(acumulados_yucatan())
+estadisticas
+```
+
+```{r Acumulados por ageb, eval=FALSE}
+summary(acumulados_yucatan(tipo = "ageb"))
+```
