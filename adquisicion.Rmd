@@ -19,7 +19,7 @@ Datos de movilidad del 2021 origen-destino. Los datos cuentan con el municipio o
 
 Para este estudio se agruparon los datos acumulados del noviembre y diciembre de 2021 del estado de Yucatán. Para ello se generaron las siguientes funciones.
 
-```{r Funciones de movilidad, include=TRUE}
+```{r Funciones para agrupar datos de movilidad, include=TRUE}
 #' Filtro de movimiento interno
 #'
 #' Filtra los dispositivos que se movieron dentro de Yucatán.
@@ -104,12 +104,139 @@ acumulados_yucatan <- function(tipo = "municipio") {
 }
 ```
 
-
-```{r Acumulados por municipio}
-estadisticas <- summary(acumulados_yucatan())
-estadisticas
+```{r Acumulados por municipio, eval=FALSE}
+estadisticas_mun <- acumulados_yucatan()
+summary(estadisticas_mun)
 ```
 
 ```{r Acumulados por ageb, eval=FALSE}
-summary(acumulados_yucatan(tipo = "ageb"))
+estadisticas_ageb <- acumulados_yucatan(tipo = "ageb")
+summary(estadisticas_ageb)
 ```
+
+
+## Marco Geoestadístico Nacional
+
+Información del Marco Geoestadístico Nacional de diciembre del 2021 que se podría utilizar.
+
+|Archivo|Nombre|Útil|
+|:-|:--------------------|:-:|
+|31**a**  |Áreas Geoestadísticas Básicas Urbanas|✅|
+|31**ar** |Áreas Geoestadísticas Básicas Rurales|✅|
+|31**ent**|Áreas Geoestadísticas Estatales|✅|
+|31**mun**|Áreas Geoestadísticas Municipales|✅|
+|31**cd** |Caserío Disperso|❌|
+|31**e**  |Ejes de vialidad (segmentos de vialidad cuya dimensión es variable)|✅|
+|31**fm** |Frentes de manzanas|❌|
+|31**lpr**|Localidades Puntuales Rurales|✅|
+|31**l**  |Localidades Urbanas y Rurales Amanzanadas|✅|
+|31**pe** |Polígonos Externos (delimitan el área de una localidad rural que contiene caserío disperso y servicios fuera de ésta)|❌|
+|31**pem**|Polígonos Externos de Manzanas (contiene el caserío disperso en la periferia de localidades urbanas)|❌|
+|31**m**  |Polígonos de manzanas|❌|
+|31**sia**|Servicios con Información complementaria de tipo Área (áreas verdes, camellones, glorietas)|❌|
+|31**sil**|Servicios con Información complementaria de tipo Línea (ríos, ferrocarriles, corrientes de agua)|❌|
+|31**sip**|Servicios con Información complementaria de tipo Puntual|❌|
+|31**ti** |Territorio Insular|❌|
+
+Preprocesamiento de archivos para guardarlos en la proyección correcta: 32616.
+
+```{r lectura de archivos MGN}
+trasnformat_mgn <- function(archivo, nombre) {
+  capa <- st_transform(
+    st_read(
+      file.path(data_original, "mgn", paste0("31", archivo, ".shp")),
+      options = "ENCODING=WINDOWS-1252"),
+    crs = 32616)
+  
+  st_write(
+    capa,
+    file.path(data_procesada, paste0(nombre, ".gpkg")),
+    layer = nombre,
+    delete_layer = TRUE)
+  
+  return(capa)
+}
+entidad = trasnformat_mgn('ent', 'entidad')
+```
+
+```{r Almacenamiento de archivos del MGN, eval=FALSE}
+trasnformat_mgn('a', 'agebs_urbanas')
+trasnformat_mgn('ar', 'agebs_rurales')
+trasnformat_mgn('mun', 'municipios')
+trasnformat_mgn('e', 'segmentos_vialidad')
+trasnformat_mgn('lpr', 'localidades_rurales')
+trasnformat_mgn('l', 'localidades_urbanas_y_rurales_amanzanadas')
+```
+
+
+## Gema
+
+[Gema](https://gema.conahcyt.mx/visualizador?capas=gref_red_nacional_caminos_21_nal_l,,1;gref_cabeceras_municipales_20_loc_p,,1;gref_division_estatal_20_est_a,,1;gref_division_municipal_21_mun_a,,1#map=9/20.6035/-88.4996) contienen datos estructurados y preprocesados en un servidor de mapas (Geoserver) que podrían servir para este análisis, como la Red Nacional de Caminos 2021 y las Cabeceras municipales 2020.
+
+<img alt="Red Nacional de Caminos 2021 y Cabeceras municipales 2020" src="./img/gema-cabeceras-yucatan.png" />
+
+Para obtener estos datos solo del estado de Yucatán, se puede filtrar por clave geográfica o por polígono, para ello primero se debe obtener el poligono de interés.
+
+Extracción del poligono más grande del estado de Yucatán para aplicar filtros a Gema.
+
+```{r Obtención del poligono máyor de Yucatán}
+poligonos <- st_cast(st_transform(entidad, crs = 4326), "POLYGON")
+poligono_mayor <- poligonos[which.max(st_area(poligonos)), ]$geometry
+plot(poligono_mayor)
+
+bbox <- as.numeric(st_bbox(poligono_mayor))
+print(bbox)
+```
+
+Visualización de las capas de gema filtradas por clave geográfica o por polígono:
+
+```{r}
+leaflet(
+  # st_transform(municipios, crs = 4326)
+) %>%
+  # setView(lng = -89.5, lat = 20.75, zoom = 7.5) %>%
+  fitBounds(lng1 = bbox[1], lat1 = bbox[2], lng2 = bbox[3], lat2 = bbox[4]) %>%
+  setMaxBounds(lng1 = bbox[1], lat1 = bbox[2], lng2 = bbox[3], lat2 = bbox[4]) %>%
+  # addTiles() %>%
+  # addPolygons(color = "green", weight = 1, fillOpacity = 0) %>%
+  leaflet.extras2::addWMS(
+    baseUrl = "https://gema.conahcyt.mx/geoserver/wms",
+    layers = "gref_division_estatal_20_est_a",
+    options = WMSTileOptions(
+      format = "image/png",
+      transparent = TRUE,
+      CQL_FILTER = "cve_ent='31'"
+    )
+  ) %>%
+  leaflet.extras2::addWMS(
+    baseUrl = "https://gema.conahcyt.mx/geoserver/wms",
+    layers = "gref_division_municipal_21_mun_a",
+    options = WMSTileOptions(
+      format = "image/png",
+      transparent = TRUE,
+      CQL_FILTER = "cve_ent='31'"
+    )
+  ) %>%
+  leaflet.extras2::addWMS(
+    baseUrl = "https://gema.conahcyt.mx/geoserver/wms",
+    layers = "gref_cabeceras_municipales_20_loc_p",
+    options = WMSTileOptions(
+      format = "image/png",
+      transparent = TRUE,
+      CQL_FILTER = "cve_ent='31'"
+    )
+  ) %>%
+  leaflet.extras2::addWMS(
+    baseUrl = "https://gema.conahcyt.mx/geoserver/wms",
+    layers = "gref_red_nacional_caminos_21_nal_l",
+    options = WMSTileOptions(
+      format = "image/png",
+      transparent = TRUE,
+      CQL_FILTER = paste0("INTERSECTS(geom,", st_as_text(
+        ms_simplify(poligono_mayor, keep = 0.05, keep_shapes = TRUE)
+      ), ") AND escala_vis<=3")
+    )
+  )
+```
+
+Extracción de fetures de las capas de Gema
