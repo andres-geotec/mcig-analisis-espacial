@@ -156,7 +156,6 @@ trasnformat_mgn <- function(archivo, nombre) {
   
   return(capa)
 }
-entidad = trasnformat_mgn('ent', 'entidad')
 ```
 
 ```{r Almacenamiento de archivos del MGN, eval=FALSE}
@@ -180,8 +179,10 @@ Para obtener estos datos solo del estado de Yucatán, se puede filtrar por clave
 Extracción del poligono más grande del estado de Yucatán para aplicar filtros a Gema.
 
 ```{r Obtención del poligono máyor de Yucatán}
+entidad = trasnformat_mgn('ent', 'entidad')
 poligonos <- st_cast(st_transform(entidad, crs = 4326), "POLYGON")
 poligono_mayor <- poligonos[which.max(st_area(poligonos)), ]$geometry
+poligono_mayor <- ms_simplify(poligono_mayor, keep = 0.05, keep_shapes = TRUE)
 plot(poligono_mayor)
 
 bbox <- as.numeric(st_bbox(poligono_mayor))
@@ -190,7 +191,9 @@ print(bbox)
 
 Visualización de las capas de gema filtradas por clave geográfica o por polígono:
 
-```{r}
+```{r Visualización de las capas de gema filtradas}
+url_gema = "https://gema.conahcyt.mx/geoserver/ows"
+
 leaflet(
   # st_transform(municipios, crs = 4326)
 ) %>%
@@ -200,7 +203,7 @@ leaflet(
   # addTiles() %>%
   # addPolygons(color = "green", weight = 1, fillOpacity = 0) %>%
   leaflet.extras2::addWMS(
-    baseUrl = "https://gema.conahcyt.mx/geoserver/wms",
+    baseUrl = url_gema,
     layers = "gref_division_estatal_20_est_a",
     options = WMSTileOptions(
       format = "image/png",
@@ -209,7 +212,7 @@ leaflet(
     )
   ) %>%
   leaflet.extras2::addWMS(
-    baseUrl = "https://gema.conahcyt.mx/geoserver/wms",
+    baseUrl = url_gema,
     layers = "gref_division_municipal_21_mun_a",
     options = WMSTileOptions(
       format = "image/png",
@@ -218,7 +221,7 @@ leaflet(
     )
   ) %>%
   leaflet.extras2::addWMS(
-    baseUrl = "https://gema.conahcyt.mx/geoserver/wms",
+    baseUrl = url_gema,
     layers = "gref_cabeceras_municipales_20_loc_p",
     options = WMSTileOptions(
       format = "image/png",
@@ -227,16 +230,52 @@ leaflet(
     )
   ) %>%
   leaflet.extras2::addWMS(
-    baseUrl = "https://gema.conahcyt.mx/geoserver/wms",
+    baseUrl = url_gema,
     layers = "gref_red_nacional_caminos_21_nal_l",
     options = WMSTileOptions(
       format = "image/png",
       transparent = TRUE,
-      CQL_FILTER = paste0("INTERSECTS(geom,", st_as_text(
-        ms_simplify(poligono_mayor, keep = 0.05, keep_shapes = TRUE)
-      ), ") AND escala_vis<=3")
+      CQL_FILTER = paste0("INTERSECTS(geom,",
+        st_as_text(poligono_mayor)
+        # gsub(" ", "", st_as_text(st_as_sfc(st_bbox(poligono_mayor))))
+        # st_as_text(st_as_sfc(st_bbox(poligono_mayor)))
+      ,") AND escala_vis<=3")
     )
   )
 ```
 
 Extracción de fetures de las capas de Gema
+
+```{r Extracción de capas de Gema}
+preparar_gema <- function(parametros, nombre) {
+  parametros <- c(list(
+    service = 'WFS',
+    request = 'GetFeature',
+    version = '2.0.0',
+    outputFormat = 'application/json'
+  ), parametros)
+  
+  url <- paste0(url_gema, "?",
+    paste(names(parametros), parametros, sep = "=", collapse = "&"))
+  
+  capa <- st_transform(st_read(url), crs = 32616)
+  st_write(
+    capa,
+    file.path(data_procesada, paste0(nombre, ".gpkg")),
+    layer = nombre,
+    delete_layer = TRUE)
+  
+  return(capa)
+}
+
+preparar_gema(list(
+  typeName = "gref_cabeceras_municipales_20_loc_p",
+  CQL_FILTER = "cve_ent='31'"
+), "cabeceras_municipales")
+
+preparar_gema(list(
+  typeName = "gref_red_nacional_caminos_21_nal_l",
+  bbox = paste(c(bbox, 'EPSG:4326'), collapse = ",")
+), "red_caminos")
+```
+
