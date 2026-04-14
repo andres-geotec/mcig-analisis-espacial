@@ -1,0 +1,70 @@
+---
+title: "Matriz origen-destino"
+author: "AndrésAndrés Martínez González"
+date: "2026-04-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+pacman::p_load(sf, stringr, dplyr, tidyr, ggplot2, reshape2)
+ruta_data = file.path(".", "data_procesada", "zm")
+```
+
+## Lectura
+
+Hipotesis: a mayor nivel de ingresos los viajes son más cortos, mientras que a menor nivel de ingresos los viajes son más largos
+
+```{r Lectura de movilidad}
+movilidad <- read.csv(file.path(ruta_data, "municipio-interno.csv")) |>
+  mutate(# asegurar los caracteres adecuados con ceros a la izquierda
+    source = str_pad(as.character(source), width = 5, pad = "0", side = "left"),
+    target = str_pad(as.character(target), width = 5, pad = "0", side = "left"))
+head(movilidad)
+```
+
+```{r Creación de matriz od}
+orden <- sort(unique(movilidad$source))
+
+# Convertir a factor con niveles ordenados
+matriz_od <- movilidad |>
+  mutate(source = factor(source, levels = orden),
+         target = factor(target, levels = orden)) |>
+  group_by(source, target, .drop = FALSE) |>
+  summarise(w = sum(w), .groups = 'drop') |>
+  pivot_wider(names_from = target, values_from = w, values_fill = 0)
+
+print(matriz_od)
+```
+
+```{r Mapa de calor de la matriz od}
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+
+matriz_long <- melt(matriz_od, id.vars = "source", variable.name = "target", value.name = "flujo")
+
+ggplot(matriz_long, aes(x = target, y = source, fill = flujo)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "red", name = "Flujo") +
+  geom_text(aes(label = flujo), size = 3) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Matriz Origen-Destino", x = "Destino", y = "Origen")
+```
+
+
+## Con vectores
+
+```{r}
+cabeceras <- st_read(file.path(ruta_data, "cabeceras_municipales.gpkg"))
+head(cabeceras)
+```
+
+```{r}
+plot(cabeceras$geom)
+```
+
+
+
