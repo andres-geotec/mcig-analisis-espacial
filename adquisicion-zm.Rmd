@@ -10,8 +10,22 @@ knitr::opts_chunk$set(echo = TRUE)
 
 pacman::p_load(dplyr, sf, stringr, ggplot2, leaflet, leaflet.extras2, rmapshaper)
 data_original = file.path(".", "data_original")
-data_procesada = file.path(".", "data_procesada")
+data_procesada = file.path(".", "data_procesada", "zm")
 ```
+
+## Zona metropolitana de Mérida
+
+[Metrópolis de México 2020](https://www.gob.mx/cms/uploads/sedatu/MM2020_06022024.pdf).
+
+<img alt="Mapa de la Zona metropolitana de Mérida" src="./img/zmmerida-mapa.png" />
+
+<img alt="Tabla de la Zona metropolitana de Mérida" src="./img/zmmerida-tabla.png" />
+
+```{r Definición de la zona metropolitana}
+zm_muns <- c('31002','31013','31020','31038','31039','31041','31050','31063','31090','31093','31095','31100','31101')
+print(paste(length(zm_muns), 'Municipios:', paste(zm_muns, collapse = ' ')))
+```
+
 
 ## Movilidad
 
@@ -19,7 +33,7 @@ Datos de movilidad del 2021 origen-destino. Los datos cuentan con el municipio o
 
 Para este estudio se agruparon los datos acumulados del noviembre y diciembre de 2021 del estado de Yucatán. Para ello se generaron las siguientes funciones.
 
-```{r Funciones para agrupar datos de movilidad, include=TRUE}
+```{r Funciones para agrupar datos de movilidad}
 #' Filtro de movimiento interno
 #'
 #' Filtra los dispositivos que se movieron dentro de Yucatán.
@@ -33,8 +47,8 @@ Para este estudio se agruparon los datos acumulados del noviembre y diciembre de
 #' # Ejemplo de filtrado
 #' filtro_yucatan_interno(df)
 acumular_movilidad <- function(df1, df2) {
-  return(bind_rows(df1, df2) %>%
-    group_by(source, target) %>%
+  return(bind_rows(df1, df2) |>
+    group_by(source, target) |>
     summarise(w = sum(w, na.rm = TRUE), .groups = "drop"))
 }
 
@@ -52,8 +66,8 @@ acumular_movilidad <- function(df1, df2) {
 #'
 #' @examples
 #' # Ejemplo de estructuración de archivos de ageb
-#' acumulados_yucatan(tipo = "ageb")
-acumulados_yucatan <- function(tipo = "municipio") {
+#' preparar_movilidad(tipo = "ageb")
+preparar_movilidad <- function(tipo = "municipio") {
   # archivos disponibles de movilidad
   archivos <- list.files(
     path = file.path(data_original, paste0("movilidad_", tipo)),
@@ -66,23 +80,29 @@ acumulados_yucatan <- function(tipo = "municipio") {
   llegadas_acumulado <- data.frame()
   salidas_acumulado <- data.frame()
   
+  n_caracteres_cve <- ifelse(tipo == "municipio", 5, 13)
   for(archivo in archivos) {
-    width_pad_cve <- ifelse(tipo == "municipio", 5, 13)
-    df <- read.csv(archivo) %>%
+    df <- read.csv(archivo) |>
       mutate(# asegurar los caracteres adecuados con ceros a la izquierda
-        source = str_pad(as.character(source), width = width_pad_cve, pad = "0", side = "left"),
-        target = str_pad(as.character(target), width = width_pad_cve, pad = "0", side = "left"))
+        source = str_pad(as.character(source), width = n_caracteres_cve, pad = "0", side = "left"),
+        target = str_pad(as.character(target), width = n_caracteres_cve, pad = "0", side = "left"))
     
     # Filtra los que solo se movinron dentro de Yucatán
-    internos <- df |> filter(startsWith(source, "31") & startsWith(target, "31"))
+    internos <- df |> filter(
+      str_starts(source, paste(zm_muns, collapse = "|")) &
+      str_starts(target, paste(zm_muns, collapse = "|")))
     internos_acumulado <- acumular_movilidad(internos_acumulado, internos)
     
     # Filtra los que vienen de otros estados y llegaron a Yucatán
-    llegadas <- df |> filter(!startsWith(source, "31") & startsWith(target, "31"))
+    llegadas <- df |> filter(
+      !str_starts(source, paste(zm_muns, collapse = "|")) &
+      str_starts(target, paste(zm_muns, collapse = "|")))
     llegadas_acumulado <- acumular_movilidad(llegadas_acumulado, llegadas)
     
     # Filtra los que son de Yucatán de origen y salieron a otros estados
-    salidas <- df |> filter(startsWith(source, "31") & !startsWith(target, "31"))
+    salidas <- df |> filter(
+      str_starts(source, paste(zm_muns, collapse = "|")) &
+      !str_starts(target, paste(zm_muns, collapse = "|")))
     salidas_acumulado <- acumular_movilidad(salidas_acumulado, salidas)
     
     # Guardar estadísticas
@@ -90,8 +110,12 @@ acumulados_yucatan <- function(tipo = "municipio") {
       archivo = tail(strsplit(archivo, "/")[[1]], 1), total = sum(df$w), total_filas = nrow(df),
       internos = sum(internos$w), internos_acumulado = sum(internos_acumulado$w),
       internos_filas = nrow(internos), internos_filas_acumulado = nrow(internos_acumulado),
-      llegadas = nrow(llegadas), llegadas_acumulado = nrow(llegadas_acumulado),
-      salidas = nrow(salidas), salidas_acumulado = nrow(salidas_acumulado)
+      
+      llegadas = sum(llegadas$w), llegadas_acumulado = sum(llegadas_acumulado$w),
+      llegadas_filas = nrow(llegadas), llegadas_filas_acumulado = nrow(llegadas_acumulado),
+      
+      salidas = sum(salidas$w), salidas_acumulado = sum(salidas_acumulado$w),
+      salidas_filas = nrow(salidas), salidas_filas_acumulado = nrow(salidas_acumulado)
     ))
   }
   
@@ -105,12 +129,12 @@ acumulados_yucatan <- function(tipo = "municipio") {
 ```
 
 ```{r Acumulados por municipio, eval=FALSE}
-estadisticas_mun <- acumulados_yucatan()
+estadisticas_mun <- preparar_movilidad()
 summary(estadisticas_mun)
 ```
 
 ```{r Acumulados por ageb, eval=FALSE}
-estadisticas_ageb <- acumulados_yucatan(tipo = "ageb")
+estadisticas_ageb <- preparar_movilidad(tipo = "ageb")
 summary(estadisticas_ageb)
 ```
 
@@ -141,15 +165,17 @@ Información del Marco Geoestadístico Nacional de diciembre del 2021 que se pod
 Preprocesamiento de archivos para guardarlos en la proyección correcta: 32616.
 
 ```{r lectura de archivos MGN}
-trasnformat_mgn <- function(archivo, nombre) {
+preparar_mgn <- function(archivo, nombre) {
   capa <- st_transform(
-    st_read(
-      file.path(data_original, "mgn", paste0("31", archivo, ".shp")),
+    st_read(file.path(data_original, "mgn", paste0("31", archivo, ".shp")),
       options = "ENCODING=WINDOWS-1252"),
     crs = 32616)
   
-  st_write(
-    capa,
+  if (archivo != 'ent') {
+    capa <- capa |> filter(str_starts(CVEGEO, paste(zm_muns, collapse = "|")))
+  }
+  
+  st_write(capa,
     file.path(data_procesada, paste0(nombre, ".gpkg")),
     layer = nombre,
     delete_layer = TRUE)
@@ -159,12 +185,15 @@ trasnformat_mgn <- function(archivo, nombre) {
 ```
 
 ```{r Almacenamiento de archivos del MGN, eval=FALSE}
-trasnformat_mgn('a', 'agebs_urbanas')
-trasnformat_mgn('ar', 'agebs_rurales')
-trasnformat_mgn('mun', 'municipios')
-trasnformat_mgn('e', 'segmentos_vialidad')
-trasnformat_mgn('lpr', 'localidades_rurales')
-trasnformat_mgn('l', 'localidades_urbanas_y_rurales_amanzanadas')
+preparar_mgn('a', 'agebs_urbanas')
+preparar_mgn('ar', 'agebs_rurales')
+preparar_mgn('ent', 'entidad')
+preparar_mgn('lpr', 'localidades_rurales')
+preparar_mgn('l', 'localidades_urbanas_y_rurales_amanzanadas')
+preparar_mgn('e', 'segmentos_vialidad')
+```
+```{r Almacenamiento de municipios}
+municipios <- preparar_mgn('mun', 'municipios')
 ```
 
 
@@ -176,14 +205,14 @@ trasnformat_mgn('l', 'localidades_urbanas_y_rurales_amanzanadas')
 
 Para obtener estos datos solo del estado de Yucatán, se puede filtrar por clave geográfica o por polígono, para ello primero se debe obtener el poligono de interés.
 
-Extracción del poligono más grande del estado de Yucatán para aplicar filtros a Gema.
+Extracción del poligono de la zona metropolitana de Mérida para aplicar filtros a Gema.
 
-```{r Obtención del poligono máyor de Yucatán}
-entidad = trasnformat_mgn('ent', 'entidad')
-poligonos <- st_cast(st_transform(entidad, crs = 4326), "POLYGON")
-poligono_mayor <- poligonos[which.max(st_area(poligonos)), ]$geometry
+```{r, Obtención del poligono zm}
+poligonos <- st_cast(st_union(municipios), "POLYGON")
+poligono_mayor <- poligonos[which.max(st_area(poligonos)), ]#$geometry
 poligono_mayor <- ms_simplify(poligono_mayor, keep = 0.05, keep_shapes = TRUE)
-plot(poligono_mayor)
+poligono_mayor <- st_transform(poligono_mayor, crs = 4326)
+plot(st_transform(poligono_mayor, crs = 4326))
 
 bbox <- as.numeric(st_bbox(poligono_mayor))
 print(bbox)
@@ -195,13 +224,12 @@ Visualización de las capas de gema filtradas por clave geográfica o por políg
 url_gema = "https://gema.conahcyt.mx/geoserver/ows"
 
 leaflet(
-  # st_transform(municipios, crs = 4326)
+  st_transform(municipios, crs = 4326)
 ) %>%
   # setView(lng = -89.5, lat = 20.75, zoom = 7.5) %>%
   fitBounds(lng1 = bbox[1], lat1 = bbox[2], lng2 = bbox[3], lat2 = bbox[4]) %>%
   setMaxBounds(lng1 = bbox[1], lat1 = bbox[2], lng2 = bbox[3], lat2 = bbox[4]) %>%
   # addTiles() %>%
-  # addPolygons(color = "green", weight = 1, fillOpacity = 0) %>%
   leaflet.extras2::addWMS(
     baseUrl = url_gema,
     layers = "gref_division_estatal_20_est_a",
@@ -211,22 +239,14 @@ leaflet(
       CQL_FILTER = "cve_ent='31'"
     )
   ) %>%
-  leaflet.extras2::addWMS(
-    baseUrl = url_gema,
-    layers = "gref_division_municipal_21_mun_a",
-    options = WMSTileOptions(
-      format = "image/png",
-      transparent = TRUE,
-      CQL_FILTER = "cve_ent='31'"
-    )
-  ) %>%
+  addPolygons(color = "gray", weight = 1, fillOpacity = 0) %>%
   leaflet.extras2::addWMS(
     baseUrl = url_gema,
     layers = "gref_cabeceras_municipales_20_loc_p",
     options = WMSTileOptions(
       format = "image/png",
       transparent = TRUE,
-      CQL_FILTER = "cve_ent='31'"
+      CQL_FILTER = paste0("cvegeomun IN (", paste(zm_muns, collapse = ','), ")")
     )
   ) %>%
   leaflet.extras2::addWMS(
@@ -246,7 +266,7 @@ leaflet(
 
 Extracción de fetures de las capas de Gema
 
-```{r Extracción de capas de Gema}
+```{r Extracción de capas de Gema, eval=FALSE}
 preparar_gema <- function(parametros, nombre) {
   parametros <- c(list(
     service = 'WFS',
@@ -270,7 +290,7 @@ preparar_gema <- function(parametros, nombre) {
 
 preparar_gema(list(
   typeName = "gref_cabeceras_municipales_20_loc_p",
-  CQL_FILTER = "cve_ent='31'"
+  CQL_FILTER = paste0("cvegeomun%20IN%20(", paste(zm_muns, collapse = ','), ")")
 ), "cabeceras_municipales")
 
 preparar_gema(list(
