@@ -1,0 +1,125 @@
+---
+title: "Saldo migratorio"
+author: "AndrésAndrés Martínez González"
+date: "2026-04-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#pacman::p_load(sf, stringr, dplyr, tidyr, ggplot2, reshape2)
+pacman::p_load(sf, stringr, dplyr, ggplot2, cowplot)
+
+ruta_data = file.path(".", "data_procesada", "zm")
+municipios <- st_read(file.path(ruta_data, 'municipios.gpkg'))
+agebs_urbanas <- st_read(file.path(ruta_data, 'agebs_urbanas.gpkg'))
+loc_amanzanadas <- st_read(file.path(ruta_data, 'localidades_urbanas_y_rurales_amanzanadas.gpkg'))
+```
+
+```{r Lectura de movilidad}
+leer_movilidad <- function(tipo = "municipio") {
+  n_caracteres_cve <- ifelse(tipo == "municipio", 5, 13)
+  
+  return(read.csv(file.path(ruta_data, paste0(tipo, "-interno.csv"))) |>
+    mutate(# asegurar los caracteres adecuados con ceros a la izquierda
+      source = str_pad(as.character(source), width = n_caracteres_cve, pad = "0", side = "left"),
+      target = str_pad(as.character(target), width = n_caracteres_cve, pad = "0", side = "left")))
+}
+
+movilidad_mun <- leer_movilidad()
+head(movilidad_mun)
+```
+
+```{r Cálculo de migración}
+migracion <- function(df_movilida) {
+  return(full_join(
+    df_movilida |>
+      group_by(cvegeo = source) |>
+      summarise(salidas = sum(w), .groups = "drop"),
+    df_movilida |>
+      group_by(cvegeo = target) |>
+      summarise(llegadas = sum(w), .groups = "drop"),
+    by = "cvegeo"))
+}
+
+migracion_mun <- migracion(movilidad_mun)
+head(migracion_mun)
+
+summary(migracion_mun)
+```
+
+
+```{r Unir valores}
+ver_coropletas <- function(capa) {
+  plot_grid(
+    ggplot(capa) +
+      geom_sf(aes(fill = salidas), color = NA) +
+      guides(fill = guide_colorbar(title = "Expulciones.")) +
+      scale_fill_gradient(low = "#fee8c8", high = "#e34a33") +
+      theme_void(),
+    ggplot(capa) +
+      geom_sf(aes(fill = llegadas), color = NA) +
+      guides(fill = guide_colorbar(title = "Recibidos.")) +
+      scale_fill_gradient(low = "#fee8c8", high = "#e34a33") +
+      theme_void() +
+      theme(legend.position = "left"),
+    ncol=2)
+}
+
+ver_coropletas(left_join(municipios, migracion_mun, by = c("CVEGEO" = "cvegeo")))
+```
+
+```{r}
+movilidad_ageb <- leer_movilidad('ageb')
+head(movilidad_ageb)
+```
+
+```{r}
+migracion_ageb <- migracion(movilidad_ageb)
+head(migracion_ageb)
+#migracion_ageb
+
+summary(migracion_ageb)
+```
+
+```{r}
+ver_coropletas(left_join(agebs_urbanas, migracion_ageb, by = c("CVEGEO" = "cvegeo")))
+```
+
+```{r}
+movilidad_loc <- movilidad_ageb |>
+  group_by(source = substr(source, 1, 9), target = substr(target, 1, 9)) |>
+  summarise(w = sum(w, na.rm = TRUE), .groups = "drop")
+
+movilidad_loc
+```
+
+```{r}
+migracion_loc <- migracion(movilidad_loc)
+#head(migracion_loc)
+migracion_loc
+
+summary(migracion_loc)
+```
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

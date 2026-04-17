@@ -1,6 +1,6 @@
 ---
 title: "Matriz origen-destino"
-author: "AndrésAndrés Martínez González"
+author: "Andrés Martínez González"
 date: "2026-04-10"
 output: html_document
 ---
@@ -12,46 +12,102 @@ pacman::p_load(sf, stringr, dplyr, tidyr, ggplot2, reshape2)
 ruta_data = file.path(".", "data_procesada", "zm")
 ```
 
-## Lectura
+**Que es la Matriz origen-destino?**
 
-Hipotesis: a mayor nivel de ingresos los viajes son más cortos, mientras que a menor nivel de ingresos los viajes son más largos
+## Datos por municipio
+
+Lectura de la base de datos estructurada
 
 ```{r Lectura de movilidad}
-movilidad <- read.csv(file.path(ruta_data, "municipio-interno.csv")) |>
-  mutate(# asegurar los caracteres adecuados con ceros a la izquierda
-    source = str_pad(as.character(source), width = 5, pad = "0", side = "left"),
-    target = str_pad(as.character(target), width = 5, pad = "0", side = "left"))
-head(movilidad)
+leer_movilidad <- function(granularidad = "municipio") {
+  return(read.csv(
+    file.path(ruta_data, paste0(granularidad, "-interno.csv"))))
+}
+
+movilidad_mun <- leer_movilidad()
+head(movilidad_mun)
 ```
+
+### Matriz origen-destino por municipio
+
+Creación del dataframe con la Matriz origen-destino, las filas corresponden al origen o salida y las columnas al destino o llegada
 
 ```{r Creación de matriz od}
-orden <- sort(unique(movilidad$source))
+matriz_od <- function(df_movilidad) {
+  orden <- sort(unique(df_movilidad$source))
+  
+  return(df_movilidad |>
+    mutate(source = factor(source, levels = orden),
+           target = factor(target, levels = orden)) |>
+    group_by(source, target, .drop = FALSE) |>
+    summarise(w = sum(w), .groups = 'drop') |>
+    pivot_wider(names_from = target, values_from = w, values_fill = 0))
+}
 
-# Convertir a factor con niveles ordenados
-matriz_od <- movilidad |>
-  mutate(source = factor(source, levels = orden),
-         target = factor(target, levels = orden)) |>
-  group_by(source, target, .drop = FALSE) |>
-  summarise(w = sum(w), .groups = 'drop') |>
-  pivot_wider(names_from = target, values_from = w, values_fill = 0)
-
-print(matriz_od)
+matriz_od_mun <- matriz_od(movilidad_mun)
+print(matriz_od_mun)
 ```
 
+Creación de la visualización de Mapa de calor de la Matríz origen destino.
+
+**Que es un mapa de calor?**
+
+Se configuró para que el gradiente de la escala de colores llegué al límite de 50,000, es decir los valores de 50 mil o más tendrán el gradiente más alto.
+
+Dado el rango de los datos es visiblemente amplio, desde 0 hasta 69,383 y la distribución es muy sesgada, con la mayoría son valores pequeños y pocos valores muy grandes, con aproximadamente el 30-40% de los valores en cero. Se eligió una escala logaritmica para la clasificación, definiendo los rangos desde 0, 1, 10, 100, 1,000, 10,000 hasta 50,000.
+
 ```{r Mapa de calor de la matriz od}
-library(ggplot2)
-library(reshape2)
-library(dplyr)
+mapa_calor <- function(matriz_od) {
+  matriz_long <- melt(matriz_od,
+                      id.vars = "source",
+                      variable.name = "target",
+                      value.name = "flujo")
 
-matriz_long <- melt(matriz_od, id.vars = "source", variable.name = "target", value.name = "flujo")
+  ggplot(matriz_long, aes(x = target, y = source, fill = flujo)) +
+    geom_tile() +
+    scale_fill_gradientn(name = "Flujo",
+                         limits = c(0, 50000),
+                         oob = scales::squish,
+                         colors = c("#FFFFFF", "#FF85B2"),
+                         values = scales::rescale(
+                           c(0, 1, 10, 100, 1000, 10000, 50000))) +
+    geom_text(aes(label = flujo), size = 2.3) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = "Matriz Origen-Destino", x = "Destino", y = "Origen")
+}
 
-ggplot(matriz_long, aes(x = target, y = source, fill = flujo)) +
-  geom_tile() +
-  scale_fill_gradient(low = "white", high = "red", name = "Flujo") +
-  geom_text(aes(label = flujo), size = 3) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = "Matriz Origen-Destino", x = "Destino", y = "Origen")
+mapa_calor(matriz_od_mun)
+```
+
+## Datos por localidad
+
+Los datos se estructuraron a partir de las bases de datos de agebs agrupados por ageb y municipio, lo que permite obtener los movimientos dentro del mismo municipio.
+
+### Matriz origen-destino por municipio, obtenidos de localidades
+
+```{r}
+movilidad_loc <- leer_movilidad('localidad')
+#head(movilidad_loc)
+
+movilidad_mun_loc = movilidad_loc |>
+  group_by(source = substr(source, 1, 5),
+           target = substr(target, 1, 5)) |>
+  summarise(w = sum(w, na.rm = TRUE), .groups = "drop")
+#head(movilidad_mun_loc)
+
+matriz_od_mun_loc <- matriz_od(movilidad_mun_loc)
+#print(matriz_od_mun_loc)
+
+mapa_calor(matriz_od_mun_loc)
+```
+
+### Matriz origen-destino por localidad
+
+```{r}
+matriz_od_loc <- matriz_od(movilidad_loc)
+#print(matriz_od_loc)
+mapa_calor(matriz_od_loc)
 ```
 
 
@@ -66,5 +122,15 @@ head(cabeceras)
 plot(cabeceras$geom)
 ```
 
+```{r}
 
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
 

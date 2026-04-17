@@ -23,7 +23,7 @@ data_procesada = file.path(".", "data_procesada", "zm")
 
 ```{r Definición de la zona metropolitana}
 zm_muns <- c('31002','31013','31020','31038','31039','31041','31050','31063','31090','31093','31095','31100','31101')
-print(paste(length(zm_muns), 'Municipios:', paste(zm_muns, collapse = ' ')))
+print(paste(length(zm_muns), 'Municipios:', paste(zm_muns, collapse = ', ')))
 ```
 
 
@@ -34,6 +34,24 @@ Datos de movilidad del 2021 origen-destino. Los datos cuentan con el municipio o
 Para este estudio se agruparon los datos acumulados del noviembre y diciembre de 2021 del estado de Yucatán. Para ello se generaron las siguientes funciones.
 
 ```{r Funciones para agrupar datos de movilidad}
+formato_clave <- function(clave, n_caracteres_cve) {
+  return(substr(str_pad(as.character(clave),
+                        width = n_caracteres_cve,
+                        pad = "0",
+                        side = "left"), 1, n_caracteres_cve))
+}
+
+leer_movilidad <- function(archivo, n_caracteres_cve) {
+  return(read.csv(archivo) |> mutate(
+      # asegurar los caracteres adecuados con ceros a la izquierda
+      source = formato_clave(source, n_caracteres_cve),
+      target = formato_clave(target, n_caracteres_cve)))
+}
+
+en_yucatan <- function(clave) {
+  return(str_starts(clave, paste(zm_muns, collapse = "|")))
+}
+
 #' Filtro de movimiento interno
 #'
 #' Filtra los dispositivos que se movieron dentro de Yucatán.
@@ -52,6 +70,15 @@ acumular_movilidad <- function(df1, df2) {
     summarise(w = sum(w, na.rm = TRUE), .groups = "drop"))
 }
 
+guardar_movilidad <- function(granularidad, dfs) {
+  for (tipo in names(dfs)) {
+    nombre <- paste0(granularidad, "-", tipo, ".csv")
+    write.csv(dfs[[tipo]], 
+              file.path(data_procesada, nombre),
+              row.names = FALSE)
+  }
+}
+
 #' Estructuración de archivos de movilidad
 #'
 #' - Lee un archivos de movilidad, asegurandose que las claves geográficas sean leídas correctamente, en string y con el número adecuado de carácteres de acuerdo al tipo, municipio o ageb.
@@ -66,11 +93,13 @@ acumular_movilidad <- function(df1, df2) {
 #'
 #' @examples
 #' # Ejemplo de estructuración de archivos de ageb
-#' preparar_movilidad(tipo = "ageb")
-preparar_movilidad <- function(tipo = "municipio") {
+#' preparar_movilidad(granularidad = "ageb")
+preparar_movilidad <- function(granularidad = "municipio") {
   # archivos disponibles de movilidad
   archivos <- list.files(
-    path = file.path(data_original, paste0("movilidad_", tipo)),
+    path = file.path(data_original, paste0(
+        "movilidad_",
+        ifelse(granularidad == "localidad", "ageb", granularidad))),
     pattern = "*.csv", full.names = TRUE)
   # archivos que sean de noviembre y diciembre
   archivos <- archivos[grepl("_2021_11|_2021_12", archivos)]
@@ -80,29 +109,20 @@ preparar_movilidad <- function(tipo = "municipio") {
   llegadas_acumulado <- data.frame()
   salidas_acumulado <- data.frame()
   
-  n_caracteres_cve <- ifelse(tipo == "municipio", 5, 13)
+  n_caracteres_cve <- list(municipio = 5, localidad = 9, ageb = 13)[[granularidad]]
   for(archivo in archivos) {
-    df <- read.csv(archivo) |>
-      mutate(# asegurar los caracteres adecuados con ceros a la izquierda
-        source = str_pad(as.character(source), width = n_caracteres_cve, pad = "0", side = "left"),
-        target = str_pad(as.character(target), width = n_caracteres_cve, pad = "0", side = "left"))
+    df <- leer_movilidad(archivo, n_caracteres_cve)
     
     # Filtra los que solo se movinron dentro de Yucatán
-    internos <- df |> filter(
-      str_starts(source, paste(zm_muns, collapse = "|")) &
-      str_starts(target, paste(zm_muns, collapse = "|")))
+    internos <- df |> filter(en_yucatan(source) & en_yucatan(target))
     internos_acumulado <- acumular_movilidad(internos_acumulado, internos)
     
     # Filtra los que vienen de otros estados y llegaron a Yucatán
-    llegadas <- df |> filter(
-      !str_starts(source, paste(zm_muns, collapse = "|")) &
-      str_starts(target, paste(zm_muns, collapse = "|")))
+    llegadas <- df |> filter(!en_yucatan(source) & en_yucatan(target))
     llegadas_acumulado <- acumular_movilidad(llegadas_acumulado, llegadas)
     
     # Filtra los que son de Yucatán de origen y salieron a otros estados
-    salidas <- df |> filter(
-      str_starts(source, paste(zm_muns, collapse = "|")) &
-      !str_starts(target, paste(zm_muns, collapse = "|")))
+    salidas <- df |> filter(en_yucatan(source) & !en_yucatan(target))
     salidas_acumulado <- acumular_movilidad(salidas_acumulado, salidas)
     
     # Guardar estadísticas
@@ -119,10 +139,10 @@ preparar_movilidad <- function(tipo = "municipio") {
     ))
   }
   
-  write.csv(internos_acumulado, file.path(data_procesada, paste0(tipo, "-interno.csv")), row.names = FALSE)
-  write.csv(llegadas_acumulado, file.path(data_procesada, paste0(tipo, "-llegadas.csv")), row.names = FALSE)
-  write.csv(salidas_acumulado, file.path(data_procesada, paste0(tipo, "-salidas.csv")), row.names = FALSE)
-  write.csv(estadisticas, file.path(data_procesada, paste0(tipo, "-estadisticas.csv")), row.names = FALSE)
+  guardar_movilidad(granularidad, list(interno = internos_acumulado,
+                                       llegadas = llegadas_acumulado,
+                                       salidas = salidas_acumulado,
+                                       estadisticas = estadisticas))
   
   return(estadisticas)
 }
@@ -134,8 +154,13 @@ summary(estadisticas_mun)
 ```
 
 ```{r Acumulados por ageb, eval=FALSE}
-estadisticas_ageb <- preparar_movilidad(tipo = "ageb")
+estadisticas_ageb <- preparar_movilidad("ageb")
 summary(estadisticas_ageb)
+```
+
+```{r Acumulados por localidad, eval=FALSE}
+estadisticas_loc <- preparar_movilidad("localidad")
+summary(estadisticas_loc)
 ```
 
 
