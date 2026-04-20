@@ -1,0 +1,91 @@
+---
+title: '<center>[Análisis espacial de patrones de movilidad mediante flujos origen-destino y estimación de densidad Kernel en la Zona Metropolitana de Mérida]</center>'
+author: "Maestría en Ciencias de Información Geoespacial - Geointeligencia"
+date: "2026-04-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Autores:
+
+* Martínez González Andrés
+* Mendoza Vargas Eduardo
+* Miranda Pestaña Fátima
+* Robles Cruz Karla
+
+
+## Introducción
+
+[Texto]
+
+Para entender cómo las ciudades están organizadas territorial y funcionalmente, la movilidad urbana es un componente esencial. Mediante el estudio de flujos origen-destino (OD), se pueden determinar patrones de interacción entre unidades espaciales y también establecer áreas de dependencia, concentración y centralidad dentro de un sistema urbano.
+
+La Zona Metropolitana de Mérida, en estas circunstancias, tiene una estructura que se distingue por tener una concentración intensa de actividades en su núcleo central; esto incide de manera directa en cómo funcionan los desplazamientos diarios. No obstante, para analizar estos flujos no es suficiente con examinar las conexiones directas entre los municipios; también es necesario entender cómo se distribuyen espacialmente de manera continua.
+
+Por esta razón, el estudio actual combina el uso de líneas curvas para representar flujos con técnicas de análisis espacial como la estimación de densidad Kernel (KDE), con el objetivo de detectar áreas en donde la movilidad es más intensa y descubrir patrones espaciales que subyacen. Esta perspectiva posibilita el tránsito de un enfoque discreto (líneas OD) a uno continuo del fenómeno, lo que hace más fácil la interpretación de cómo está estructurada territorialmente la movilidad.
+
+## ¿Hipotesis?
+
+[Texto]
+
+A mayor nivel de ingresos los viajes son más cortos, mientras que a menor nivel de ingresos los viajes son más largos.
+
+## ¿Objetivo?
+
+[Texto]
+
+## Marco teórico
+
+[Texto]
+
+## Metodología
+
+[Texto]
+
+El análisis se desarrolló en varias etapas utilizando herramientas de procesamiento espacial en R.
+
+En primer lugar, se cargó la capa de municipios y se delimitó la Zona Metropolitana de Mérida a partir de un conjunto específico de claves geoestadísticas. Posteriormente, se calcularon los centroides de cada municipio como representación espacial de los puntos de origen y destino de los flujos.
+
+A continuación, se integró la base de datos de flujos origen-destino, la cual contiene información sobre la intensidad de interacción entre municipios. Estos flujos fueron filtrados para considerar únicamente aquellos relacionados con la zona de estudio, y se vincularon con las coordenadas espaciales correspondientes. Con base en su magnitud, los flujos se clasificaron en tres niveles de intensidad (bajo, medio y alto), utilizando cuantiles.
+
+Para mejorar la visualización, las conexiones entre municipios se representaron mediante curvas tipo Bézier, lo que permitió evitar la superposición de líneas y facilitar la interpretación visual de los flujos.
+
+Posteriormente, se aplicó la técnica de Estimación de Densidad Kernel (KDE). Para ello, las líneas de flujo fueron muestreadas en puntos a lo largo de su trayectoria, asignando a cada punto un peso proporcional a la intensidad del flujo. Estos puntos se utilizaron para construir un patrón espacial ponderado, sobre el cual se calculó la densidad mediante un kernel gaussiano con un radio de influencia de 7 km.
+
+El resultado de la densidad fue transformado en formato raster, recortado a la geometría de la zona metropolitana y normalizado en un rango de 0 a 1 para facilitar su interpretación. Finalmente, se generó un mapa interactivo utilizando Leaflet, integrando la superficie KDE, los flujos clasificados y los centroides municipales.
+
+[Adquisición y preparación de datos](./adquisicion-zm.html).
+
+[Matríz origen-destino](./matriz-od.html).
+
+[Mapa merida](./mapa_merida.html)
+
+[Modelo gravitatorio](./modelo-gravitatorio-resulado1.html).
+
+[Saldo migratorio](./saldo-migratorio.html).
+
+
+## Resultados
+
+[Texto]
+
+Los resultados evidencian una clara concentración de la movilidad en el municipio de Mérida, el cual actúa como nodo central dentro del sistema metropolitano. La mayoría de los flujos de alta intensidad convergen hacia este punto, confirmando su papel dominante en la estructura urbana.
+
+El análisis de las líneas de flujo muestra un patrón predominantemente radial, donde los desplazamientos se organizan desde la periferia hacia el centro. Asimismo, se observa que los flujos de alta intensidad son relativamente pocos pero concentran una gran proporción de la interacción total, mientras que los flujos de baja intensidad están más dispersos en el territorio.
+
+Por su parte, la superficie de densidad Kernel permite identificar zonas de alta concentración de movilidad más allá de las conexiones directas. Esta representación continua revela áreas críticas de interacción, destacando no solo el centro urbano, sino también algunos corredores que conectan municipios periféricos con la ciudad principal.
+
+En conjunto, los resultados sugieren que la estructura de movilidad de la Zona Metropolitana de Mérida es altamente centralizada, con una fuerte dependencia del núcleo urbano principal. Este comportamiento tiene implicaciones importantes para la planificación del transporte y el desarrollo territorial, ya que señala la necesidad de fortalecer la conectividad periférica y diversificar los polos de atracción.
+
+## Concluciones
+
+[Texto]
+
+## Referencias bibliográicas
+
+* [Referencia 1]
+* [Referencia 2]
+
