@@ -19,6 +19,11 @@ Autores:
 
 ## Introducción
 
+La movilidad urbana es clave para entender cómo se organiza el espacio en las ciudades y qué tan accesibles son las oportunidades para la población. Más allá de los traslados diarios, los flujos de origen-destino permiten observar cómo se distribuyen los servicios y actividades, así como las diferencias en las condiciones de acceso entre distintos grupos sociales.
+
+En la Zona Metropolitana de Mérida, el crecimiento hacia la periferia y la concentración de actividades en el centro han generado un patrón de movilidad con fuertes dependencias y desigualdades. Analizar estos flujos ayuda a entender cómo se estructura la ciudad en la práctica y qué tan equitativo es el acceso al territorio.
+
+En este sentido, este trabajo examina la relación entre la movilidad y las condiciones socioeconómicas, con el fin de identificar si los patrones de desplazamiento facilitan la integración urbana o, por el contrario, refuerzan la segregación socioespacial.
 
 
 ## Problema territorial: 
