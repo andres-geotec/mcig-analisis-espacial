@@ -100,7 +100,7 @@ Complementariamente, el Modelo Gravitatorio proporciona el rigor matemático nec
 **Filtro teórico:** Este modelo evidencia de manera continua la Primera Ley de la Geografía de Waldo Tobler (la interacción disminuye con la distancia). Bajo la perspectiva de Walter Isard, estos mapas ilustran los costos y fricciones del desplazamiento, evidenciando asimetrías severas donde los individuos de estratos vulnerables enfrentan un mayor "costo físico y económico" que rige la localización de sus actividades.
 
 
-### 3. [Modelo gravitatorio](./modelo-gravitatorio-resulado1.html)
+### 3. [Modelo gravitatorio](./mapa_interactivo_modelogravitatorio.html)
 **Interpretación activa**: La modelación matemática de las "masas" poblacionales calibradas por el decaimiento de la distancia corrobora que la inmensa cantidad de flujos periféricos que se dirigen a la capital no es casualidad, sino que es directamente proporcional al aglutinamiento de bienes, servicios y oportunidades en el centro.
 
 **Filtro teórico**: Este cálculo encuentra su sustento técnico de forma exacta en el modelo de gravitación antrópica propuesto por Alan Wilson, comprobando que la "masa" o atractivo del núcleo central meridano es lo suficientemente masiva para capturar la movilidad, pese a que la dificultad o el costo del traslado incrementen. Asimismo, los resultados reafirman los planteamientos de Brian Berry, probando que la sobre concentración de especialización en el lugar central refuerza su asimétrica jerarquía sobre los demás municipios.
