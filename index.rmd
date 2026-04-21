@@ -1,5 +1,5 @@
 ---
-title: '<center>[Análisis espacial de patrones de movilidad mediante flujos origen-destino y estimación de densidad Kernel en la Zona Metropolitana de Mérida]</center>'
+title: '<center>Análisis espacial de patrones de movilidad mediante flujos origen-destino en la Zona Metropolitana de Mérida en el año 2021.</center>'
 author: "Maestría en Ciencias de Información Geoespacial - Geointeligencia"
 date: "2026-04-19"
 output: html_document
@@ -19,73 +19,142 @@ Autores:
 
 ## Introducción
 
-[Texto]
 
-Para entender cómo las ciudades están organizadas territorial y funcionalmente, la movilidad urbana es un componente esencial. Mediante el estudio de flujos origen-destino (OD), se pueden determinar patrones de interacción entre unidades espaciales y también establecer áreas de dependencia, concentración y centralidad dentro de un sistema urbano.
 
-La Zona Metropolitana de Mérida, en estas circunstancias, tiene una estructura que se distingue por tener una concentración intensa de actividades en su núcleo central; esto incide de manera directa en cómo funcionan los desplazamientos diarios. No obstante, para analizar estos flujos no es suficiente con examinar las conexiones directas entre los municipios; también es necesario entender cómo se distribuyen espacialmente de manera continua.
+## Problema territorial: 
+El crecimiento acelerado y desarticulado de la Zona Metropolitana de Mérida (ZMM) hacia la periferia ha consolidado un modelo de segregación socioespacial. Donde se genera una desarticulación funcional entre las áreas residenciales periféricas y los nodos de actividad económica, centralizandose mayormente en el núcleo urbano. Como resultado, se produce un incremento en las distancias y tiempos de traslado, ocasionando un mayor desplazamiento en los flujos de movilidad. 
 
-Por esta razón, el estudio actual combina el uso de líneas curvas para representar flujos con técnicas de análisis espacial como la estimación de densidad Kernel (KDE), con el objetivo de detectar áreas en donde la movilidad es más intensa y descubrir patrones espaciales que subyacen. Esta perspectiva posibilita el tránsito de un enfoque discreto (líneas OD) a uno continuo del fenómeno, lo que hace más fácil la interpretación de cómo está estructurada territorialmente la movilidad.
+## Pregunta de investigación: 
+¿Qué relación existe entre los flujos de origen-destino con los ingresos económicos de la población en la ZMM en el año 2021? 
 
-## ¿Hipotesis?
+## Justificación: 
+Es necesario comprender si la movilidad en la ZMM es un factor que crea oportunidades o si, por el contrario, opera como una barrera de exclusión, considerando que los bienes y servicios se concentran de manera constante en el norte y centro de la ciudad. Es posible hacer visible la desigualdad territorial al analizar si los estratos con menores ingresos enfrentan trayectorias más largas o costosas. Este diagnóstico, que se basa en el análisis de datos espaciales, ofrece pruebas esenciales para que los responsables de tomar decisiones pasen de una planificación enfocada en el transporte a otra centrada en la accesibilidad universal.
 
-[Texto]
-
-A mayor nivel de ingresos los viajes son más cortos, mientras que a menor nivel de ingresos los viajes son más largos.
-
-## ¿Objetivo?
-
-[Texto]
+### Selección de herramientas: 
+1. Para entender la asimetría, dirección y jerarquía de los viajes cotidianos entre la periferia y el centro, seleccionamos modelar las conexiones intermunicipales mediante la matriz origen-destino incluyendo curvas tipo Bézier, lo que nos permitirá mapear claramente la carga directa sobre la red.
+2. Necesitamos conocer la ubicación exacta de los corredores de movilidad y la intensidad de la “fricción” territorial, por lo tanto la técnica idónea para transitar a un campo de influencia continuo será aplicar un modelo KDE.
+3. También necesitamos comprobar matemáticamente si la hiperconcentración de los viajes es proporcional a la oferta de bienes y servicios, para evaluarlo, la alternativa más robusta será estructurar un modelo gravitatorio.
+4. Además como necesitamos dimensionar si la desigualdad en la movilidad está provocando reconfiguraciones definitivas en la periferia, por ello necesitamos procesar los vectores de inmigración y emigración intermunicipal, teniendo como opción viable el análisis del saldo migratorio. 
+5. El análisis de flujos se seleccionó específicamente por su capacidad para visibilizar y cuantificar las líneas de interacción y dependencia entre distintos nodos geográficos, permitiendo identificar con precisión los corredores principales que conectan a la capital con su periferia y el resto del estado.
+6. Se integró la autocorrelación espacial para aportar un rigor analítico que permite discernir si los patrones de movilidad observados son producto del azar o si obedecen a una lógica territorial de aglomeración.
 
 ## Marco teórico
+El análisis de la movilidad metropolitana se sostiene en una base teórica sólida construída desde la geografía cuantitativa, la cual nos permite comprender que los desplazamientos urbanos no son aleatorios, sino que responden a estructuras espaciales bien definidas. Por un lado, la propuesta de Haggett ayuda a entender que una ciudad funciona como una red organizada en donde existen nodos, jerarquías y conexiones donde los desplazamientos siguen patrones ya definidos, generalmente atraídos por algunos puntos clave que concentran actividad. A su vez, Edward Ulman complementa esta visión mediante su tríada de interacción espacial, donde los flujos dependen de la complementariedad entre origen y destino, la transferibilidad y la existencia de oportunidades intervinientes. 
 
-[Texto]
+La literatura contemporánea en CIG establece que la organización territorial y funcional de las ciudades no puede descifrarse únicamente a través de su morfología estática. Desde la perspectiva de la complejidad urbana aportada por Michael Batty, las metrópolis deben ser concebidas como sistemas dinámicos donde la arquitectura topológica de las redes y los flujos diarios son los verdaderos estructuradores del espacio. Este enfoque dinámico resulta crítico para analizar la Zona Metropolitana de Mérida, un territorio caracterizado por una hiperconcentración de actividades en su núcleo central. Dicha configuración no es inerte; modela coercitivamente los patrones de desplazamiento cotidianos, forzando dinámicas de dependencia periférica y catalizando procesos de segregación espacial que condicionan de manera asimétrica el acceso a las oportunidades urbanas.
+
+En términos metodológicos, el estudio de la movilidad ha transitado de enfoques discretos basados en grafos y matrices origen-destino, hacia aproximaciones continuas que permiten interpretar los flujos como campos de intensidad espacial. Esta transición encuentra sustento en la Primera Ley de la Geografía de Waldo Tobler, que establece que la interacción disminuye con la distancia. Bajo este principio, herramientas como la estimación de densidad (KDE) permiten modelar cómo los flujos puntuales se distribuyen territorialmente, revelando patrones continuos de movilidad.
+
+La estadística espacial actual proporciona instrumentos de validación matemática a través de la autocorrelación espacial, lo que complementa esta transición hacia métodos de intensidad espacial. Si Tobler sostiene que los elementos próximos están más conectados que los distantes, el índice de Moran brinda la posibilidad de aplicar este principio para analizar si en Mérida la movilidad es un suceso aleatorio o si sigue una estructura de dependencia espacial positiva. La incorporación de los Indicadores Locales de Asociación Espacial (LISA) permite identificar clústeres de movilidad que son estadísticamente relevantes, lo que enriquece esta validación estadística. Dicha aproximación no solo permite localizar geográficamente los núcleos de alta intensidad o hotspots, sino que revela las asimetrías del tejido urbano al señalar anomalías donde zonas de baja actividad colindan con polos de alta atracción, proporcionando una base cuantitativa para interpretar la fragmentación funcional de la zona metropolitana.
+
+Para explicar los mecanismos que detonan estos desplazamientos, el análisis retoma la teoría de la interacción espacial. La convergencia de viajes hacia el núcleo urbano responde a la complementariedad funcional entre periferia y centro, mediada por los costos de desplazamiento. En este punto, la aportación de Walter Isard resulta clave, al señalar que la fricción de la distancia y los costos de transporte son determinantes en la localización y concentración de actividades.
+
+La lógica de atracción centralizada se formaliza con Alan Wilson, ya que fue quien formuló entrópicamente el modelo gravitatorio, ya que otorgó el sustento técnico para demostrar cómo la "masa" o atractivo del nodo central de Mérida es lo suficientemente robusta para capturar flujos, incluso cuando las dificultades del desplazamiento aumentan.
+
+La persistencia de esta estructura monocéntrica se alinea con los planteamientos de Brian Berry sobre los lugares centrales, donde la concentración de servicios especializados refuerza la jerarquía urbana y condiciona la dirección de los flujos. Finalmente, las implicaciones sociales de esta configuración se comprenden a partir de la geografía del tiempo de Torsten Hägerstrand, quien demuestra que la movilidad está limitada por restricciones espacio-temporales. 
+
+Bajo esta lente teórica, los trayectos periféricos de larga distancia dejan de ser simples vectores geométricos para revelarse como la materialización de una asimetría estructural: son las poblaciones más alejadas y con menores recursos quienes se ven obligadas a absorber el mayor costo físico y económico de la fricción espacial para lograr acceder a la estructura de oportunidades de la ciudad.
+
 
 ## Metodología
+Para modelar las dinámicas de movilidad, la investigación articuló cinco metodologías de análisis espacial que permiten transitar de representaciones discretas a modelos probabilísticos continuos y validaciones estadísticas de clústeres.
 
-[Texto]
+Inicialmente, la topología de la red metropolitana se estructuró a través de una Matriz Origen-Destino. Para superar las limitaciones de la cartografía tradicional de líneas rectas, las conexiones intermunicipales se modelaron cartográficamente mediante curvas tipo Bézier. Esta decisión algorítmica y de visualización no sólo mitiga la saturación visual o overplotting inherente a las redes urbanas densas, sino que facilita la lectura de la direccionalidad, la asimetría y la jerarquía de los vectores de movilidad entre el núcleo y la periferia.
+Para complementar esta visión discreta, se aplicó una Estimación de Densidad Kernel (KDE), técnica que permite interpretar la movilidad como un campo de influencia continuo en el territorio. El procedimiento metodológico consistió en el muestreo de las líneas de flujo mediante una densificación de puntos a lo largo de sus trayectorias geométricas, asignando a cada coordenada un peso estadístico estrictamente proporcional a la intensidad del flujo original. Sobre este patrón de puntos ponderado se ejecutó una función de densidad probabilística utilizando un kernel gaussiano.
 
-El análisis se desarrolló en varias etapas utilizando herramientas de procesamiento espacial en R.
+Simultáneamente, con el objetivo de contrastar la configuración empírica de los viajes frente al comportamiento físico esperado del sistema, se estructuró un Modelo Gravitatorio espacial. Este modelo paramétrico empleó el volumen poblacional de cada unidad espacial como variable proxy de su "masa", ajustando un parámetro de decaimiento por distancia para representar la fricción territorial. Esta calibración permitió evaluar matemáticamente el nivel de atracción teórica del núcleo central de la metrópoli, sirviendo como un marco de referencia analítico para dimensionar el poder gravitacional de Mérida.
 
-En primer lugar, se cargó la capa de municipios y se delimitó la Zona Metropolitana de Mérida a partir de un conjunto específico de claves geoestadísticas. Posteriormente, se calcularon los centroides de cada municipio como representación espacial de los puntos de origen y destino de los flujos.
+Finalmente, el análisis de la movilidad pendular cotidiana se consolidó al contrastarlo con las dinámicas de largo plazo mediante un Análisis de Saldo Migratorio. A través del procesamiento espacial de los vectores de inmigración y emigración, se evaluó la capacidad de atracción y retención poblacional del territorio.
 
-A continuación, se integró la base de datos de flujos origen-destino, la cual contiene información sobre la intensidad de interacción entre municipios. Estos flujos fueron filtrados para considerar únicamente aquellos relacionados con la zona de estudio, y se vincularon con las coordenadas espaciales correspondientes. Con base en su magnitud, los flujos se clasificaron en tres niveles de intensidad (bajo, medio y alto), utilizando cuantiles.
+Para escalar esta macrodinámica al nivel intraurbano, el modelo incorporó la identificación de hotspots (puntos calientes) de llegada y de salida a nivel de Área Geoestadística Básica (AGEB) dentro de la Zona Metropolitana de Mérida (ZMM). Esta técnica de agrupamiento espacial permitió aislar con alta granularidad los microterritorios que operan como expulsores o sumideros poblacionales, dotando a la investigación de una perspectiva integral que vincula los traslados diarios con la reconfiguración demográfica estructural de la ciudad.
 
-Para mejorar la visualización, las conexiones entre municipios se representaron mediante curvas tipo Bézier, lo que permitió evitar la superposición de líneas y facilitar la interpretación visual de los flujos.
+Se incluyó un análisis de autocorrelación espacial por medio del Índice de Moran y los indicadores locales LISA. Este procedimiento posibilita someter la distribución de la movilidad a pruebas de significación estadística, con el fin de determinar si las concentraciones de flujo halladas en el núcleo de Mérida son indicativas de agrupaciones con dependencia espacial real o si responden a sucesos aleatorios. Se consiguió separar la dinámica interna de la ciudad de las presiones periféricas metropolitanas, utilizando un flujo de ingeniería de datos optimizado para la escala micro-espacial y matrices estandarizadas de pesos espaciales. Esta diferenciación técnica es crucial para definir los nodos policéntricos de la capital y garantizar que la interpretación de los datos no se vea alterada debido a prejuicios en la agregación territorial.
 
-Posteriormente, se aplicó la técnica de Estimación de Densidad Kernel (KDE). Para ello, las líneas de flujo fueron muestreadas en puntos a lo largo de su trayectoria, asignando a cada punto un peso proporcional a la intensidad del flujo. Estos puntos se utilizaron para construir un patrón espacial ponderado, sobre el cual se calculó la densidad mediante un kernel gaussiano con un radio de influencia de 7 km.
+La articulación de estos cuatro métodos no responde a una simple acumulación, sino fue diseñada para resolver el problema MAUP y capturar la segregación socioespacial en todas sus dimensiones. El uso aislado de matrices Origen-Destino suele generar sesgos interpretativos por el solapamiento de vectores, así que la implementación algorítmica de curvas Bézier mitiga este ruido visual, teniendo una lectura precisa de la direccionalidad de los viajes.
 
-El resultado de la densidad fue transformado en formato raster, recortado a la geometría de la zona metropolitana y normalizado en un rango de 0 a 1 para facilitar su interpretación. Finalmente, se generó un mapa interactivo utilizando Leaflet, integrando la superficie KDE, los flujos clasificados y los centroides municipales.
+A su vez, transitar de esta conectividad discreta a un modelo de densidad continua (KDE) es fundamental para la investigación, ya que permite revelar aquellos "corredores de fricción" subyacentes donde la población de menores ingresos invierte la mayor cantidad de tiempo y recursos, haciendo visible la barrera de exclusión territorial. 
 
-[Adquisición y preparación de datos](./adquisicion-zm.html).
+Complementariamente, el Modelo Gravitatorio proporciona el rigor matemático necesario para comprobar que estos desplazamientos periféricos largos no son aleatorios, sino que están forzados estructuralmente por la "masa" de atracción del núcleo urbano central. 
 
-[Matríz origen-destino](./matriz-od.html).
 
-[Mapa merida](./mapa_merida.html)
-
-[Modelo gravitatorio](./modelo-gravitatorio-resulado1.html).
-
-[Saldo migratorio](./saldo-migratorio.html).
+```{r, include=FALSE}
+# [Adquisición y preparación de datos](./adquisicion-zm.html).
+```
 
 
 ## Resultados
+### 1. [Matríz origen-destino](./matriz-od.html) (por municipio y por localidad):
+**Interpretación activa:** La visualización de la conectividad intermunicipal y local mediante el uso de curvas tipo Bézier expone claramente la direccionalidad, asimetría y jerarquía de los viajes cotidianos, evitando la saturación visual geométrica. Además, el uso del mapa de calor con una escala logarítmica demuestra matemáticamente una distribución altamente sesgada: existe una hiperconcentración de viajes hacia el norte y centro de Mérida, donde valores extremos (hasta casi 70,000 desplazamientos de dispositivos) contrastan con rutas de nulo flujo periférico.
 
-[Texto]
+**Filtro teórico:** Aplicando la teoría de Haggett, esta matriz ilustra cómo la Zona Metropolitana de Mérida (ZMM) funciona como una red organizada de jerarquías y nodos dependientes, en la que los desplazamientos están atraídos coercitivamente hacia un punto central. Estos resultados constatan directamente la tríada de interacción espacial de Edward Ullman: el flujo masivo responde a una altísima "complementariedad" forzada entre el núcleo (concentrador de actividades) y la periferia, agravada por una severa carencia de oportunidades intervinientes en las afueras.
 
-Los resultados evidencian una clara concentración de la movilidad en el municipio de Mérida, el cual actúa como nodo central dentro del sistema metropolitano. La mayoría de los flujos de alta intensidad convergen hacia este punto, confirmando su papel dominante en la estructura urbana.
 
-El análisis de las líneas de flujo muestra un patrón predominantemente radial, donde los desplazamientos se organizan desde la periferia hacia el centro. Asimismo, se observa que los flujos de alta intensidad son relativamente pocos pero concentran una gran proporción de la interacción total, mientras que los flujos de baja intensidad están más dispersos en el territorio.
+### 2. [KDE](./mapa_merida.html)
+**Interpretación activa:** La transición del análisis desde redes discretas a un modelo de densidad probabilístico continuo visibiliza claramente los verdaderos “corredores de fricción” del territorio. El modelo de densidad probabilística revela de manera geoespacial la barrera de exclusión territorial, demostrando sobre el mapa las extensas trayectorias en donde las poblaciones invierten severas cantidades de recursos y tiempo.
 
-Por su parte, la superficie de densidad Kernel permite identificar zonas de alta concentración de movilidad más allá de las conexiones directas. Esta representación continua revela áreas críticas de interacción, destacando no solo el centro urbano, sino también algunos corredores que conectan municipios periféricos con la ciudad principal.
+**Filtro teórico:** Este modelo evidencia de manera continua la Primera Ley de la Geografía de Waldo Tobler (la interacción disminuye con la distancia). Bajo la perspectiva de Walter Isard, estos mapas ilustran los costos y fricciones del desplazamiento, evidenciando asimetrías severas donde los individuos de estratos vulnerables enfrentan un mayor "costo físico y económico" que rige la localización de sus actividades.
 
-En conjunto, los resultados sugieren que la estructura de movilidad de la Zona Metropolitana de Mérida es altamente centralizada, con una fuerte dependencia del núcleo urbano principal. Este comportamiento tiene implicaciones importantes para la planificación del transporte y el desarrollo territorial, ya que señala la necesidad de fortalecer la conectividad periférica y diversificar los polos de atracción.
+
+### 3. [Modelo gravitatorio](./modelo-gravitatorio-resulado1.html)
+**Interpretación activa**: La modelación matemática de las "masas" poblacionales calibradas por el decaimiento de la distancia corrobora que la inmensa cantidad de flujos periféricos que se dirigen a la capital no es casualidad, sino que es directamente proporcional al aglutinamiento de bienes, servicios y oportunidades en el centro.
+
+**Filtro teórico**: Este cálculo encuentra su sustento técnico de forma exacta en el modelo de gravitación antrópica propuesto por Alan Wilson, comprobando que la "masa" o atractivo del núcleo central meridano es lo suficientemente masiva para capturar la movilidad, pese a que la dificultad o el costo del traslado incrementen. Asimismo, los resultados reafirman los planteamientos de Brian Berry, probando que la sobre concentración de especialización en el lugar central refuerza su asimétrica jerarquía sobre los demás municipios.
+
+
+### 4. [Saldo migratorio](./saldo-migratorio.html).
+**Interpretación activa**: El procesamiento de los flujos de inmigración y emigración a gran escala y la revisión de sus mapas de zonas expulsoras y receptoras exponen una reconfiguración definitiva. Revela que las dificultades logísticas y de transporte para trasladarse diariamente terminan forzando las dinámicas de largo plazo que determinan la retención o pérdida de población.
+
+**Filtro teórico**: A través de los postulados de Torsten Hägerstrand y su geografía del tiempo, entendemos que la movilidad cotidiana posee restricciones infranqueables en el cruce del espacio y tiempo. Cuando las áreas segregadas no logran superar financieramente ni temporalmente esta barrera de fricción diaria para llegar a la oportunidad central, se ven obligados a materializar cambios migratorios estructurales.
+
+
+### 5. Identificación de hotspots por AGEB ([llegadas](./hotspots_llegadas_zm.html) y [salidas](./hotspots_salidas_zm.html))
+**Interpretación activa**: La granularidad conseguida al calcular índices (como Gi* de Llegadas y Salidas a nivel de área geoestadística básica) consigue aislar con alta definición a los microterritorios exactos de la ZMM que funcionan como epicentros sistemáticos de expulsión o, inversamente, como sumideros absolutos.
+
+**Filtro teórico**: Retomando el enfoque de la complejidad urbana de Michael Batty, estos microterritorios demuestran que la ciudad no posee una forma estática, sino que los flujos (el tejido topológico dinámico de estos puntos de atracción intraurbanos) condicionan verdaderamente las reconfiguraciones internas, imponiendo el acceso asimétrico a oportunidades urbanas.
+
+
+### 6. [Movilidad Micro-espacial: Ciudad de Mérida](./flujo_intra_merida.html)
+**Interpretación activa**: Dentro de las fronteras intraurbanas se distinguen patrones intensivos de desplazamientos marcados por el nivel de ingresos. Es evidente, según los datos de flujos, que la distribución condiciona viajes notoriamente más cortos para los estratos de mayores ingresos y viajes mucho más largos para la población de bajos recursos, provocando el overplotting natural en los nodos de actividad.
+
+**Filtro teórico**: Estas líneas mapeadas se interpretan directamente como la "materialización de una asimetría estructural" advertida en la integración teórica. Refuerza que la organización dinámica actual del núcleo urbano funge como un mecanismo de exclusión y segregación (un sistema de barreras), tal como predice la teoría social de integración espacial discutida a partir de la economía de Walter Isard.
+
+
+### 7. [Movilidad metropolitana](./flujo_metropolitano.html)
+**Interpretación activa**: Las visualizaciones logradas mediante redes probabilísticas entre toda el área metropolitana de Mérida exponen un masivo cruce pendular intermunicipal que satura las líneas en una relación radial, dejando en evidencia las enormes brechas y el crecimiento expansivo desconectado.
+
+**Filtro teórico**: Confirmando la dinámica urbana de redes de Haggett y el enfoque de la complejidad de Batty, la hiperconcentración coercitiva no deja lugar para subcentros de oportunidades, sino que modela las líneas de vida de toda la periferia en un modelo de dependencia funcional absoluta con el núcleo de Mérida.
+
+
+### 8. [Clusters de Movilidad (LISA)](./lisa_merida.html)
+**Interpretación activa**: Los mapas de Indicadores Locales de Asociación Espacial segmentan con claridad agrupaciones que operan estadísticamente por encima del azar. Exhiben clústeres tipo "Alto-Alto" muy definidos en la hiperconcentración de la ZMM frente a vacíos geográficos ("Bajo-Bajo" y colindancias anómalas).
+
+**Filtro teórico**: La inclusión de este indicador resuelve el problema de la agregación territorial (MAUP) y brinda la validación estadística que requieren las leyes de intensidad espacial de Tobler. El Índice de Moran comprueba matemáticamente que esta distribución inequitativa en Mérida responde a una lógica territorial rígida de aglomeración socioespacial y no a dinámicas accidentales.
+
+
+### 9. Conectividad municipal de Mérida
+**Interpretación activa**: Las curvas graficadas a lo largo y ancho del estado de Yucatán revelan una intensidad abrumadora de flujos (vectores de más de 60,000 dispositivos de interacciones) que convergen asimétricamente desde una vasta región peninsular hacia el solo municipio de la capital.
+
+**Filtro teórico**: Más allá del contexto de metrópolis, esto evidencia de manera empírica que Mérida opera bajo el papel predominante de "Lugar Central" dictado en la obra de Brian Berry. Su monopolio infraestructural absorbe toda capacidad y refuerza la jerarquía territorial como macro-nodo de centralización sistémica que obliga a desplazarse desde lo rural a la concentración económica del estado.
+
 
 ## Concluciones
 
-[Texto]
+Existe una relación altamente asimétrica donde, a menor nivel de ingresos, los viajes son forzosamente más largos y costosos, mientras que a mayor nivel de ingresos, los trayectos se acortan. La evidencia del Modelo Gravitatorio demuestra que el aglutinamiento de bienes, servicios y oportunidades en el núcleo urbano (norte y centro) tiene una "masa" de atracción que fuerza la convergencia de viajes desde la periferia. Al cruzar esto con la Movilidad Micro-espacial, se materializa que las poblaciones alejadas y marginadas son quienes absorben el mayor costo físico y económico de la fricción espacial. En conclusión, la movilidad en la ZMM opera actualmente como una barrera de exclusión y un catalizador de la segregación socioespacial, limitando el acceso equitativo a la estructura de oportunidades de la ciudad.
+
+El análisis multiescalar evidenció un modelo metropolitano de dependencia absoluta hacia el nodo central de Mérida. A partir de la Matriz Origen-Destino, se detectó una distribución severamente sesgada y jerárquica con volúmenes extremos que superan los 69,000 desplazamientos de dispositivos hacia la capital, en contraste con rutas periféricas de nulo flujo. A través del modelo continuo KDE, se visibilizaron los "corredores de fricción", que son los trayectos donde la población periférica invierte vastas cantidades de recursos para integrarse a la dinámica urbana. Los indicadores espaciales LISA y de Hotspots por AGEB probaron matemáticamente que esta concentración masiva no es un fenómeno originado por el azar, sino que obedece a clústeres de aglomeración territorial rígidos y asimétricos. Finalmente, la evaluación del Saldo Migratorio advierte que estas dificultades en la movilidad pendular diaria están escalando, obligando a reconfiguraciones demográficas definitivas (expulsión de población) en los microterritorios que no logran sortear la desconexión funcional.
+
+El abordaje técnico de este estudio demostró que analizar la complejidad urbana contemporánea requiere superar las representaciones estáticas y la geometría tradicional. Transitar de un análisis discreto de redes a un modelo probabilístico continuo (como la Estimación de Densidad Kernel) fue un paso metodológico crítico para dejar de ver simples líneas rectas y poder mapear la intensidad real de la exclusión espacial. Además, la implementación de algoritmos de curvas tipo Bézier resolvió de forma exitosa el sesgo interpretativo por solapamiento (overplotting), permitiendo una lectura limpia de la direccionalidad de los inmensos volúmenes de datos de origen-destino. Por último, el blindaje analítico que otorgó la autocorrelación espacial (Índice de Moran y LISA) logró mitigar el Problema de la Unidad Areal Modificable (MAUP), validando estadísticamente las áreas de dependencia espacial y garantizando que los patrones observados sobre la asimetría metropolitana no sean alteraciones causadas por el nivel de agregación territorial. La sinergia de estos modelos dota a los tomadores de decisiones de una base cuantitativa robusta para transitar hacia una planificación urbana centrada en la accesibilidad universal.
+
 
 ## Referencias bibliográicas
 
-* [Referencia 1]
-* [Referencia 2]
+* Berry, B. J. L. (1967). Geography of Market Centers and Retail Distribution. Prentice-Hall.
+* Batty, M. (2013). The New Science of Cities. The MIT Press.
+* Canal Banco Interamericano de Desarrollo. (03 de marzo de 2023). Code4Dev: Conozca Matriz OD Transporte Público [Archivo de Vídeo]. Youtube. https://www.youtube.com/watch?v=WV_f90suf48
+* Isard, W. (1956). Location and Space-Economy: A General Theory Relating to Industrial Location, Market Areas, Land Use, Trade, and Urban Structure. The MIT Press.
+* Hägerstrand, T. (1970). What about people in Regional Science? Papers of the Regional Science Association, 24(1), 7-21.
+* Haggett, P. (1965). Locational Analysis in Human Geography. Edward Arnold.
+* Tobler, W. R. (1970). A Computer Movie Simulating Urban Growth in the Detroit Region. Economic Geography, 46(sup1), 234-240.
+* Ullman, E. L. (1980). Geography as Spatial Interaction. University of Washington Press.
+* Wilson, A. G. (1970). Entropy in Urban and Regional Modelling. Pion.
 

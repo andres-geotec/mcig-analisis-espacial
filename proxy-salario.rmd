@@ -1,0 +1,62 @@
+---
+title: "Porxy de salarios"
+author: "AndrésAndrés Martínez González"
+date: "2026-04-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+pacman::p_load(haven, labelled, foreign, dplyr, stringr)
+
+data_original = file.path(".", "data_original")
+data_procesada = file.path(".", "data_procesada", "zm")
+
+#zm_muns <- c('002','013','020','038','039','041','050','063','090','093','095','100','101')
+viviendas <- read.spss(file.path(data_original, "Censo2020_CA_yuc_sav", "Viviendas31.SAV"), to.data.frame = TRUE)
+```
+
+```{r Lectura y adecuación de base de datos}
+zm_muns <- c('31002','31013','31020','31038','31039','31041','31050','31063','31090','31093','31095','31100','31101')
+
+# viviendas <- read.spss(file.path(data_original, "Censo2020_CA_yuc_sav", "Viviendas31.SAV"), to.data.frame = TRUE)
+print(paste0("Tamaño de la base completa: ", nrow(viviendas)))
+
+viviendas_zm <- viviendas |>
+    filter(str_starts(ID_VIV, paste(zm_muns, collapse = "|"))) |>
+    mutate(
+      #FACTOR = as.numeric(as.character(FACTOR)),
+        FOCOS = as.numeric(as.character(FOCOS))
+    )
+print(paste0("Tamaño de la base filtrada: ", nrow(viviendas_zm)))
+
+head(viviendas_zm)
+```
+
+```{r}
+
+
+#viviendas_zm |>
+#    group_by(MUN) |>
+#    summarise(total_ventas = sum(FOCOS), .groups = 'drop')
+
+viviendas_zm %>%
+  mutate(
+    #FACTOR = as.numeric(as.character(FACTOR)),
+    FOCOS = as.numeric(as.character(FOCOS))
+  ) %>%
+  group_by(MUN) %>%
+  summarise(promedio = sum(FOCOS * FACTOR) / sum(FACTOR))
+```
+
+```{r}
+viviendas_zm$FOCOS
+
+viviendas_zm$FOCOS[36]
+```
+
+
+
+
+
