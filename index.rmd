@@ -88,7 +88,7 @@ Complementariamente, el Modelo Gravitatorio proporciona el rigor matemático nec
 
 
 ## Resultados
-### 1. [Matríz origen-destino](./matriz-od.html) (por municipio y por localidad) y [distancias](./distancia.html):
+### 1. [Matríz origen-destino](./matriz-od.html) (por municipio y por localidad) y [distancias](./distancias.html):
 **Interpretación activa:** La visualización de la conectividad intermunicipal y local mediante el uso de curvas tipo Bézier expone claramente la direccionalidad, asimetría y jerarquía de los viajes cotidianos, evitando la saturación visual geométrica. Además, el uso del mapa de calor con una escala logarítmica demuestra matemáticamente una distribución altamente sesgada: existe una hiperconcentración de viajes hacia el norte y centro de Mérida, donde valores extremos (hasta casi 70,000 desplazamientos de dispositivos) contrastan con rutas de nulo flujo periférico.
 
 **Filtro teórico:** Aplicando la teoría de Haggett, esta matriz ilustra cómo la Zona Metropolitana de Mérida (ZMM) funciona como una red organizada de jerarquías y nodos dependientes, en la que los desplazamientos están atraídos coercitivamente hacia un punto central. Estos resultados constatan directamente la tríada de interacción espacial de Edward Ullman: el flujo masivo responde a una altísima "complementariedad" forzada entre el núcleo (concentrador de actividades) y la periferia, agravada por una severa carencia de oportunidades intervinientes en las afueras.
