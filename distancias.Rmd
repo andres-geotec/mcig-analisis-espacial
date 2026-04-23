@@ -1,0 +1,199 @@
+---
+title: "distancias"
+author: "AndrésAndrés Martínez González"
+date: "2026-04-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+pacman::p_load(sf, stringr, dplyr, ggplot2, cowplot, ggshadow, sfnetworks, tidyr)
+
+ruta_data = file.path(".", "data_procesada", "zm")
+
+red_caminos <- st_read(file.path(ruta_data, 'red_caminos_monoparte.gpkg'))
+cabeceras_municipales <- st_read(file.path(ruta_data, 'cabeceras_municipales.gpkg'))
+```
+
+
+```{r Longitud de cada calle}
+#cabeceras_municipales
+red_caminos <- red_caminos %>%
+  mutate(length = st_length(.))
+red_caminos %>% nrow() #%>% filter(st_geometry_type(.) != "LINESTRING")
+```
+
+
+```{r visualización de líneas y puntos}
+visualizacion_lineas_puntos <- function(lineas = red_caminos, puntos = cabeceras_municipales) {
+  ggplot() +
+    geom_sf(data = lineas, color = "#2E86AB", size = 0.5, alpha = 0.8) +
+    geom_sf(data = puntos, color = "#D64933", size = 3, alpha = 0.9) +
+    geom_sf_text(data = puntos, aes(label = nom_mun), size = 4,
+                 fontface = "bold",
+                 color = "#1A1A1A",        # Texto casi negro
+                 family = "sans") +
+    theme_void() +
+    labs(title = "Red de caminos y Cabeceras municipales de la Zona metropolitana de Mérida")
+}
+
+visualizacion_lineas_puntos()
+```
+
+```{r Cálculo de intersección de calles}
+intersect_calles <- function(cvegeo) {
+  punto_interes <- cabeceras_municipales %>%
+    filter(cvegeomun == cvegeo)
+  
+  lineas_interceptadas <- red_caminos %>%
+    filter(c(st_intersects(., punto_interes, sparse = FALSE)))
+  
+  if ((lineas_interceptadas |> nrow()) == 0) {
+    print('Buscando punto más cercano a una línea')
+    distancias <- st_distance(punto_interes, red_caminos)
+    
+    idx_cercana <- which.min(distancias)
+    lineas_interceptadas <- red_caminos[idx_cercana, ]
+    
+    punto_cercano <- st_nearest_points(punto_interes, lineas_interceptadas) %>%
+      st_cast("POINT") %>%
+      .[2]
+    st_geometry(punto_interes) <- punto_cercano
+  }
+  
+  visualizacion_lineas_puntos(lineas_interceptadas, punto_interes)
+  return(list(lineas = lineas_interceptadas, punto = punto_interes))
+}
+
+intersect_calles_y_vis <- function(cvegeo) {
+  lineas_inter <- intersect_calles(cvegeo)
+  visualizacion_lineas_puntos(lineas = lineas_inter$lineas, punto = lineas_inter$punto)
+}
+
+intersect_calles_y_vis('31002')
+```
+
+```{r Visualización de un punto que no intersecta}
+intersect_calles_y_vis('31101')
+```
+
+```{r propiedades de las líneas}
+# Diagnosticar tipos de geometría
+cat("Tipos de geometría presentes:\n")
+print(table(st_geometry_type(red_caminos)))
+
+# Ver si hay geometrías vacías
+cat("\nGeometrías vacías:", sum(st_is_empty(red_caminos)), "\n")
+
+# Ver las primeras filas problemáticas
+tipos <- st_geometry_type(red_caminos)
+problemas <- which(tipos != "LINESTRING")
+if(length(problemas) > 0) {
+  cat("\nFilas con geometrías no-LINESTRING:\n")
+  print(red_caminos[problemas[1:min(5, length(problemas))], ])
+}
+red_caminos
+```
+
+```{r Visuzalización de ruta más corta}
+red <- as_sfnetwork(red_caminos, directed = FALSE)
+ruta_mas_corta <- function(inicio, fin) {
+  ruta <- st_network_paths(red,
+                   from = cabeceras_municipales |> filter(cvegeomun == inicio),
+                   to = cabeceras_municipales |> filter(cvegeomun == fin),
+                   weights = "length")
+  
+  ruta_sf <- red %>%
+    activate("edges") %>%
+    slice(unlist(ruta$edge_paths)) %>%
+    st_as_sf()
+  
+  return(ruta_sf)
+}
+
+ruta_sf <- ruta_mas_corta('31002', '31013')
+visualizacion_lineas_puntos(ruta_sf, cabeceras_municipales)
+sum(ruta_sf$length)
+```
+
+
+```{r Cálculo de dataframe de distancias}
+nuevos_puntos <- cabeceras_municipales
+
+for(i in 1:nrow(nuevos_puntos)) {
+  resultado <- intersect_calles(nuevos_puntos$cvegeomun[i])
+  geometria <- st_geometry(resultado$punto)
+  st_geometry(nuevos_puntos[i, ]) <- geometria
+}
+
+matriz_distancias <- data.frame(
+  source = character(),
+  target = character(),
+  distance = numeric(),
+  stringsAsFactors = FALSE
+)
+
+for(i in 1:nrow(nuevos_puntos)) {
+  for(j in 1:nrow(nuevos_puntos)) {
+    #ruta_sf <- ruta_mas_corta(nuevos_puntos$cvegeomun[i], nuevos_puntos$cvegeomun[j])
+    #print(sum(ruta_sf$length))
+    
+    matriz_distancias <- rbind(matriz_distancias, data.frame(
+      source = nuevos_puntos$cvegeomun[i],
+      target = nuevos_puntos$cvegeomun[j],
+      distance = sum(ruta_mas_corta(nuevos_puntos$cvegeomun[i], nuevos_puntos$cvegeomun[j])$length),
+      stringsAsFactors = FALSE
+    ))
+  }
+}
+
+matriz_distancias
+```
+
+```{r Creación de matriz od}
+matriz_od <- function(df_movilidad) {
+  orden <- sort(unique(df_movilidad$source))
+  
+  df_movilidad$distance <- as.numeric(df_movilidad$distance)
+  
+  return(df_movilidad |>
+    mutate(source = factor(source, levels = orden),
+           target = factor(target, levels = orden)) |>
+    group_by(source, target, .drop = FALSE) |>
+    summarise(distance = sum(distance), .groups = 'drop') |>
+    pivot_wider(names_from = target, values_from = distance, values_fill = 0))
+}
+
+matriz_od_mun <- matriz_od(matriz_distancias)
+print(matriz_od_mun)
+```
+
+
+
+```{r, eval=FALSE}
+mapa_calor <- function(matriz_od) {
+  matriz_long <- melt(matriz_od,
+                      id.vars = "source",
+                      variable.name = "target",
+                      value.name = "flujo")
+
+  ggplot(matriz_long, aes(x = target, y = source, fill = flujo)) +
+    geom_tile() +
+    scale_fill_gradientn(name = "Flujo",
+                         limits = c(0, 50000),
+                         oob = scales::squish,
+                         colors = c("#FFFFFF", "#FF85B2"),
+                         values = scales::rescale(
+                           c(0, 1, 10, 100, 1000, 10000, 50000))) +
+    geom_text(aes(label = flujo), size = 2.3) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = "Matriz Origen-Destino", x = "Destino", y = "Origen")
+}
+
+mapa_calor(matriz_od_mun)
+```
+
+
+
